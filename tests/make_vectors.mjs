@@ -51,13 +51,14 @@ export async function ecdh(C) {
   const sh = await C.newSharedKey();
   v.member = { member_pub_spki_b64: user.pub, member_priv_enc_b64: user.priv_enc,
                album_key_b64: sh.raw, wrapped: await C.wrapForMember(sh.key, user.pub),
-               safety_code: await C.safetyCode(user.pub) };
+               safety_code: await C.safetyCode(user.pub),
+               pub_from_priv_enc: await C.pubFromPrivEnc(user.priv_enc) };   // public half derived from the private one
   const dev = await C.linkPair();                                        // new device without Telegram
   v.device_link = { device_pub_spki_b64: dev.pub, device_priv_pkcs8_b64: dev.priv, wrapped: await C.linkWrap(dev.pub),
                     link_check: await C.linkCheck(dev.pub) };
   const heir = await C.linkPair();                                       // trusted person ("two of two")
   const seal = await C.heirSeal(heir.pub);
-  v.heir = { heir_pub_spki_b64: heir.pub, heir_priv_pkcs8_b64: heir.priv, ...seal };
+  v.heir = { heir_pub_spki_b64: heir.pub, heir_priv_pkcs8_b64: heir.priv, heir_code: await C.heirCode(heir.pub), ...seal };
   return v;
 }
 

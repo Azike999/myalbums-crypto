@@ -328,6 +328,23 @@ window.PBCrypto = (function () {
       const h = new Uint8Array(await subtle.digest("SHA-256", b64dec(pubB64)));
       return String(((h[0] << 16) | (h[1] << 8) | h[2]) % 10000).padStart(4, "0");
     },
+    /* ---- сверка ключа доверенного (27.11.2026). Раньше телефон хозяина запирал половину A на открытую половину
+       доверенного, взятую с сервера, без проверки: сервер, у которого и так половина B, мог подставить свою пару и собрать
+       ключ. Теперь хозяин запечатывает конверт, только когда 16 цифр на его экране совпали с цифрами у доверенного
+       (сверяют голосом). 16 цифр ≈ 53 бита: подобрать пару ECDH с теми же цифрами — порядка 10^16 попыток.
+       Свою открытую половину доверенный выводит из СВОЕЙ закрытой (она заперта его основным ключом), а не берёт
+       со слов сервера: иначе сервер показал бы обоим одну и ту же чужую половину. */
+    heirCode: async (pubB64) => {
+      const h = new Uint8Array(await subtle.digest("SHA-256", b64dec(pubB64)));
+      let n = 0n; for (let i = 0; i < 8; i++) n = (n << 8n) | BigInt(h[i]);
+      return String(n % 10000000000000000n).padStart(16, "0").replace(/(\d{4})(?=\d)/g, "$1 ");
+    },
+    pubFromPrivEnc: async (privEnc) => {
+      const pk = await subtle.importKey("pkcs8", await decWith(master, b64dec(privEnc)), ECDH, true, ["deriveBits"]);
+      const j = await subtle.exportKey("jwk", pk);
+      const pub = await subtle.importKey("jwk", { kty: "EC", crv: "P-256", x: j.x, y: j.y }, ECDH, true, []);
+      return b64enc(await subtle.exportKey("spki", pub));
+    },
     b32dec, b32enc,
   };
 

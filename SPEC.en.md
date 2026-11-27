@@ -1,6 +1,6 @@
 # My Albums — how the encryption works
 
-[Русский](SPEC.md) · as of 27 November 2026 · `crypto.js` SHA-256 `2e18cc5c…1e74364`
+[Русский](SPEC.md) · as of 27 November 2026 · `crypto.js` SHA-256 `54ad03d1…ec7c7e1`
 
 Everything below is taken from the code, not from memory. The formats are checked against `test_vectors.json` by two
 independent programs (`tests/`). If the code and this text ever disagree, the code is right. Please tell us
@@ -78,6 +78,10 @@ trusted person (8).
 - **Shared-album safety code:** 10 digits from SHA-256 of the member's public key (about 33 bits). It is the same on
   both screens and is compared by voice.
 - **Device link check:** 4 digits from SHA-256 of the new device's public key (sections 6 and 10).
+- **Trusted-person code** (`heirCode`): 16 digits from the first 8 bytes of SHA-256 of the trusted person's public
+  key (about 53 bits). The trusted person computes their code from **their own private** key (`pubFromPrivEnc`),
+  not from the public key the server reports. Otherwise a dishonest server could show both people the same digits
+  of a substituted key.
 
 ## 4. What is encrypted
 
@@ -143,7 +147,9 @@ The owner's phone (`heirSeal`):
 
 The server stores C, B and the wrapped A. The server lacks A. The trusted person lacks B until the deadline, when the
 server releases it. The trusted person (`heirOpen`) opens A with their private key, computes E = A xor B, and opens C to
-get the master key. The weakness of this scheme is described in section 10.
+get the master key. Before sealing, the owner and the trusted person compare 16 digits (3.7) by phone or in person.
+The owner's phone wraps half A only after "Codes match". Before 27 November 2026 sealing happened automatically,
+without a comparison (section 10).
 
 ## 9. What the server sees in plaintext
 
@@ -201,9 +207,9 @@ Only on the user's own action, and only for their own file:
 3. **Key-substitution checks are short or optional.** These guard against a dishonest server that swaps public keys
    without changing any code:
    - **device link:** 4 digits. Finding a key pair with the same 4 digits takes about 10,000 tries, which is seconds;
-   - **trusted person:** the owner's phone takes the trusted person's public key from the server and automatically
-     wraps half A to it at sign-in, without comparing any digits. A server that already holds B could substitute its
-     own key and assemble the master key;
+   - **trusted person:** since 27 November 2026 the envelope is sealed only after comparing 16 digits (section 8).
+     Envelopes sealed earlier were made without a comparison: a server holding B could have substituted its own key
+     then. To be safe, the trusted person can be set up again;
    - **shared album:** the 10-digit safety code is shown, but comparing it is optional.
 4. **Metadata is visible** (section 9): sizes, timing, the shared-album social graph, reminder dates.
 5. **The recovery code is the key itself** (256 bits, no password). Whoever sees it has everything.

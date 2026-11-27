@@ -51,6 +51,7 @@ ok(await C.dedupTag(new TextEncoder().encode(D.dedup_tag.data_utf8)) === D.dedup
   const m = E.member, priv = await C.openUserPriv(m.member_priv_enc_b64), k = await C.unwrapForMe(m.wrapped, priv);
   ok(C.rawB64(k) === m.album_key_b64, "shared album: member unwraps album key (ECDH P-256 + HKDF + AES-GCM)");
   ok(await C.safetyCode(m.member_pub_spki_b64) === m.safety_code, "shared album: safety code");
+  ok(await C.pubFromPrivEnc(m.member_priv_enc_b64) === m.member_pub_spki_b64 && m.pub_from_priv_enc === m.member_pub_spki_b64, "own public key derived from own private key");
 }
 {
   const d = E.device_link;
@@ -62,6 +63,7 @@ ok(await C.dedupTag(new TextEncoder().encode(D.dedup_tag.data_utf8)) === D.dedup
   const { webcrypto } = await import("node:crypto");
   const priv = await webcrypto.subtle.importKey("pkcs8", fromB64(h.heir_priv_pkcs8_b64), { name: "ECDH", namedCurve: "P-256" }, false, ["deriveBits"]);
   ok(hex(fromB64(await C.heirOpen(h.env, h.share_b, h.share_a_enc, priv))) === D.master_key_hex, "trusted person: A + B -> master key");
+  ok(await C.heirCode(h.heir_pub_spki_b64) === h.heir_code && /^\d{4} \d{4} \d{4} \d{4}$/.test(h.heir_code), "trusted person: 16-digit check code");
 }
 console.log(fails ? `${fails} FAILED, ${oks} passed` : `all ${oks} checks passed`);
 process.exit(fails ? 1 : 0);

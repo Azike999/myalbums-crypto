@@ -143,6 +143,11 @@ h = hashlib.sha256(b64(d["device_pub_spki_b64"])).digest()
 ok(str(int.from_bytes(h[:3], "big") % 10000).zfill(4) == d["link_check"], "device link: 4-digit check")
 
 he = E["heir"]
+h = hashlib.sha256(b64(he["heir_pub_spki_b64"])).digest()
+c16 = str(int.from_bytes(h[:8], "big") % 10 ** 16).zfill(16)
+ok(" ".join(c16[i:i + 4] for i in range(0, 16, 4)) == he["heir_code"], "trusted person: 16-digit check code = SHA-256(pub)[:8] mod 10^16")
+mp = serialization.load_der_private_key(dec(master, b64(m["member_priv_enc_b64"])), None).public_key()
+ok(mp.public_bytes(serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo) == b64(m["member_pub_spki_b64"]), "public key derived from the private key = published one")
 hpriv = serialization.load_der_private_key(b64(he["heir_priv_pkcs8_b64"]), None)
 A = ecies_open(he["share_a_enc"], hpriv)
 B = b64(he["share_b"])
