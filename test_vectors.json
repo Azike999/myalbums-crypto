@@ -1,7 +1,7 @@
 {
   "about": "Test vectors produced by crypto.js (see tests/make_vectors.mjs). Binary values: hex or base64.",
   "seed": "myalbums-crypto test vectors v1",
-  "crypto_js_sha256": "13076e3364703965862f77042aa071ceca96edde13bb672078d7cec22c1b8d60",
+  "crypto_js_sha256": "c3018305f2371cf0ab6a6e59e7226dcd8e5e9608731a89cbdf4c6651d67713a1",
   "noble_p256_sha256": "c4e83fca5085bebe6dd26cb61ec38974b6cbb60bc356ac665802374acf99be1f",
   "deterministic": {
     "master_key_hex": "aeca9da602d7846b25727a0c58990cc04db2018b7d926feca2d59ea55cb51716",
@@ -63,20 +63,20 @@
   },
   "ecdh": {
     "member": {
-      "member_pub_spki_b64": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEBw3KsdQ4564IIbd7xYz2JhbEH/wOOxu6BSpndFyoTStBz480UhkVJ8fSFNHw/nyegPhnPoigd1gXtLBbvVxX7A==",
-      "member_priv_enc_b64": "tVwTbIgeiIy/QbteMIfgM1BLn8NQQPCJKPl+kTbETXuQ6GTtTV7e8hql4h6Q0xFMsfiXEkJoWd9ppnUQAk/zjpxqkuplQiFJCyRB8/6wo2rLH/Pa4YPthsFKoI2DiHNweBismW/ebx0g8YbXuCk7+pizeIMOyie1hbcm/YS+3vXt9ZWABWZYTj+inG6CPg09VQJQytuccD3ZSCMmbyV5Ueq8hisG/Q==",
+      "member_pub_spki_b64": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEROvfIF/tnYK+48WahtmI1DF2Ezs2BlGfcF8K7RoT/Lo+RBmPHpTxw/9eJRey7S4GAG9YQx55D+Z9IwjEqqLWmg==",
+      "member_priv_enc_b64": "tVwTbIgeiIy/QbteMIfgM1BLn8NQQPCJKPl+kTbETXuQ6GTtTV7e8hql4h6Q0xFM0LO7D3zsEO9Vq9E5NRXYVz4K1UIv/3ZVXaaBvlaQK7DLH/Pa4YOuYNTbK1j5pMWyCvnvzBEsSK8sNr7q8gxOj/UqPji/W1g+EwxqcGBa5nncM9eTV/7Y2QDfCrf6gGeq7Z1HNFrqkUrDhMeTVF2AmXMA4seScA==",
       "album_key_b64": "fRmaJDobAGm0v8R/mliJX26qQtnh7/KesqHf81xdOzs=",
-      "wrapped": "E1.BCLCtXv2kX7o/UHfqtid+MVN9dL9p2Paft/KSaPmK4xFHkdEaXAxtCCUGXt5NENYu1lwCFuEIt3u9y2iRz+HlH0=.vy2Lu3jvaM5/XInffEuMAQ==.7+us6E5r2wzjjARP.gyNQY8dzbt6b4K6WWgfqg+jhyIKr/m9FfEvsJd2do1+MV/KOiL5izjcxNuKi2bZn",
-      "safety_code": "20564 04929",
-      "pub_from_priv_enc": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEBw3KsdQ4564IIbd7xYz2JhbEH/wOOxu6BSpndFyoTStBz480UhkVJ8fSFNHw/nyegPhnPoigd1gXtLBbvVxX7A=="
+      "wrapped": "E1.BBEeWue8Eqzd9sJjColVl5rS8Gyp8chmUgCpdTrhR71PKagP3ekqT2hM/5A7ryYOuDizcEL2WW3r31SjM8DUAao=.vy2Lu3jvaM5/XInffEuMAQ==.7+us6E5r2wzjjARP.bneBJRDVMmGUHao4NJVPvnAdbKLseR7jhHM2V0Ffd7MalGAcaPosUT465Ff52qs4",
+      "safety_code": "86707 42237",
+      "pub_from_priv_enc": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEROvfIF/tnYK+48WahtmI1DF2Ezs2BlGfcF8K7RoT/Lo+RBmPHpTxw/9eJRey7S4GAG9YQx55D+Z9IwjEqqLWmg=="
     },
     "heir": {
-      "heir_pub_spki_b64": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE+flbiLkyYwGNEd/7vgbBBw+SWdGLOCJYpu6byhnKXRfC2LXZtlkuno79E9ziw4Tih5ibe/W9KVKQpKeEUrwUAQ==",
-      "heir_priv_pkcs8_b64": "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQg3YLqcZdAViv43gBeQvkq17ep9RIkopVricZF2y6SUUGhRANCAAT5+VuIuTJjAY0R3/u+BsEHD5JZ0Ys4Ilim7pvKGcpdF8LYtdm2WS6ejv0T3OLDhOKHmJt79b0pUpCkp4RSvBQB",
-      "heir_code": "2138 9638 4406 2419",
+      "heir_pub_spki_b64": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAErf1EAFYC+sHwlMJfGr2V/vie09fmIHtFs4aAcw21wRiiCUQt3Xcyh4Gh2u9nfJa3hV+oW5mZEX2OtiRHXDtMTw==",
+      "heir_priv_pkcs8_b64": "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgHrqpghb2B9KUp3pLix8u9D8Wg7dFw/v8b/+iJAoG8+2hRANCAASt/UQAVgL6wfCUwl8avZX++J7T1+Yge0WzhoBzDbXBGKIJRC3ddzKHgaHa72d8lreFX6hbmZkRfY62JEdcO0xP",
+      "heir_code": "8484 3690 7866 5375",
       "env": "zLgLiB9KeDOqk/1zGSxGbdJXT0vg/FbIIIL3xg/RZ12Ocu83LMDqu2AgfhvcBwZGnuM+gAcAU+cixPPO",
       "share_b": "E88thq7r/mVcL8xQ04GFTYvzjekMhK+OHDwhldLLNCw=",
-      "share_a_enc": "E1.BLU+Vn+4V2zei0drBeer2eOsvJElxan97+cq7yko/Jh6x+J38F+PIDmVRhOAjb9FvvhK+UtmtwglgsUwnOPu4RA=.mbKBTusVlAwAal3ychDkeQ==.moTRfPBr7FPogKSQ./fnTY9koGGKIwJOKssFdb6q8+89B9V7SK1lSKRi/5E1T8OiP+QvEZ1KMx+pYl4A6"
+      "share_a_enc": "E1.BB4DgRPpvMwpe4df2qIYYpJ/btM6IvwKzG+ONQfakSI1HWvmdaAUpL/yOeQbuWtxcTGK3hFIABYwkbyNGmxEUkE=.mbKBTusVlAwAal3ychDkeQ==.moTRfPBr7FPogKSQ.CLenonVIulK/iVoDqEKkfQhwmnMaXqHaUVr77J5ZiTELwIMsNDHFfxgIusEKGBC/"
     }
   }
 }

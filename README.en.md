@@ -58,4 +58,5 @@ See `SECURITY.md`.
 
 ## License
 
-Not chosen yet.
+MIT, see `LICENSE`. You may read, check and reuse the code anywhere, keeping the copyright notice.
+The library `lib/noble-p256.js` is MIT too, with its own notice (`lib/noble-p256.LICENSE.txt`).

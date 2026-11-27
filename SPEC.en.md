@@ -1,6 +1,6 @@
 # My Albums — how the encryption works
 
-[Русский](SPEC.md) · as of 27 November 2026 · `crypto.js` SHA-256 `13076e33…c1b8d60`
+[Русский](SPEC.md) · as of 27 November 2026 · `crypto.js` SHA-256 `c3018305…67713a1`
 
 Everything below is taken from the code, not from memory. The formats are checked against `test_vectors.json` by two
 independent programs (`tests/`). If the code and this text ever disagree, the code is right. Please tell us
