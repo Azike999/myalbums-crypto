@@ -1,6 +1,6 @@
 # My Albums — how the encryption works
 
-[Русский](SPEC.md) · as of 27 November 2026 · `crypto.js` SHA-256 `54ad03d1…ec7c7e1`
+[Русский](SPEC.md) · as of 27 November 2026 · `crypto.js` SHA-256 `13076e33…c1b8d60`
 
 Everything below is taken from the code, not from memory. The formats are checked against `test_vectors.json` by two
 independent programs (`tests/`). If the code and this text ever disagree, the code is right. Please tell us
@@ -13,7 +13,8 @@ independent programs (`tests/`). If the code and this text ever disagree, the co
   **AES-256-GCM** before upload. The server and the storage only ever receive ciphertext.
 - Everything uses the browser's standard WebCrypto (`crypto.subtle`). There is no home-made cryptography, except a
   JavaScript SHA-256 used to compute duplicate tags of large files chunk by chunk (3.4). It gives the same result as
-  WebCrypto, and the tests check that.
+  WebCrypto, and the tests check that. Linking a device by code needs P-256 point arithmetic, which WebCrypto lacks;
+  it comes from the open-source library @noble/curves (3.8).
 - What this does **not** guarantee is stated in section 10, "Limitations".
 
 ## 2. Keys
@@ -71,17 +72,51 @@ used the same way.
 The sender's ephemeral ECDH P-256 key and the recipient's public key give a 256-bit shared secret. That goes through
 `HKDF-SHA256` (16-byte random salt, info `"myalbums-shared-v1"`) to produce an AES-256-GCM key.
 Serialised as `E1.<sender public key, 65 bytes>.<salt>.<IV>.<ciphertext>`, each part in base64.
-It is used for a shared-album key sent to a member, the master key sent to a new device (6), and half A for the
-trusted person (8).
+It is used for a shared-album key sent to a member and half A for the trusted person (8). Until 27 November 2026 the
+master key was sent to a new device this way too; now that is done by code (3.8).
 
 ### 3.7 Digits that detect public-key substitution
 - **Shared-album safety code:** 10 digits from SHA-256 of the member's public key (about 33 bits). It is the same on
   both screens and is compared by voice.
-- **Device link check:** 4 digits from SHA-256 of the new device's public key (sections 6 and 10).
+- **Device link:** until 27 November 2026, 4 digits from SHA-256 of the new device's public key were compared. Now
+  it is not a comparison but a 6-digit code that the user types in (3.8).
 - **Trusted-person code** (`heirCode`): 16 digits from the first 8 bytes of SHA-256 of the trusted person's public
   key (about 53 bits). The trusted person computes their code from **their own private** key (`pubFromPrivEnc`),
   not from the public key the server reports. Otherwise a dishonest server could show both people the same digits
   of a substituted key.
+
+### 3.8 Linking a device by code: SPAKE2 (since 27 November 2026)
+The standard **SPAKE2, RFC 9382**, suite `SPAKE2-P256-SHA256-HKDF-HMAC`, with the RFC's points M and N (section 6).
+Party A is the new device, party B is the Telegram Mini App that already has the master key.
+
+```
+code:  6 random digits (uniform, by rejection from 32-bit numbers); shown on A, never sent to the server
+w    = SHA-512("myalbums-link-v1:w:" ‖ code) mod n              (n = order of P-256)
+A:     x random in [1, n);  pA = x·G + w·M;  to the server: "S1." ‖ base64(pA, 65 bytes uncompressed)
+B:     the user types the code; y random;  pB = y·G + w·N;  K = y·(pA − w·M)
+       TT = len‖"myalbums-link-v1:device" ‖ len‖"myalbums-link-v1:telegram" ‖ len‖pA ‖ len‖pB ‖ len‖K ‖ len‖w(32 bytes)
+            (len = 8 bytes little-endian, as in the RFC)
+       Ke ‖ Ka = SHA-256(TT);  KcA ‖ KcB = HKDF-SHA256(Ka, empty salt, "ConfirmationKeys");  cB = HMAC-SHA256(KcB, TT)
+       key = HKDF-SHA256(Ke, empty salt, "myalbums-link-v1:master", 32 bytes)
+       to the server: "S1." ‖ pB ‖ cB ‖ AES-256-GCM(key, master key)   (parts in base64, dot-separated; GCM as in 3.1)
+A:     K = x·(pB − w·N), same TT, Ke, KcB; cB differs → "The code didn't match"; otherwise open the master key
+```
+The peer's point is validated to be on the curve (RFC, section 7). The server sees pA, pB, cB and the locked key; the
+code cannot be computed from them. By substituting messages the server can test **one** guess of the code per answer
+from B: a 1 in 1,000,000 chance, and a failure is visible to the user.
+
+**Deviation from the RFC.** The RFC has A send a confirmation cA too before the key Ke is used. Here B answers at once
+with cB and the master key locked under a key derived from Ke. Otherwise Telegram would have to stay open until the new
+device replied, which on a single phone means 4 app switches instead of 2. This gives an attacker no extra guesses:
+each answer from B is one guess, as in the RFC. The code lives 10 minutes and is used once. No MHF is applied to w: the
+code cannot be guessed outside the exchange, and w is never stored.
+
+**Library.** WebCrypto has no elliptic-curve point addition, so P-256 arithmetic comes from the open-source library
+[@noble/curves](https://github.com/paulmillr/noble-curves) 2.4.0 (MIT, independently audited), file
+`lib/noble-p256.js` (how it was built: `lib/BUILD.md`). `crypto.js` loads it only when a device is linked, and only
+with the SHA-256 written in `crypto.js` itself (`LINK_LIB_SRI`, Subresource Integrity): the browser will not run a
+modified library. Both programs in `tests/` check the official RFC 9382 test vectors (Appendix B); the Python check
+does P-256 with its own arithmetic, without this library.
 
 ## 4. What is encrypted
 
@@ -111,7 +146,7 @@ The key is kept as plain base64 in CloudStorage and `localStorage`, because the 
 be lost with the phone. See section 10.
 
 The key reaches our server only in wrapped form:
-- during a device link (section 6; ECIES to the new device's key);
+- during a device link (sections 6 and 3.8; locked with a key from the SPAKE2 exchange);
 - in the trusted-person envelope (section 8);
 - the private ECDH half and the copies of shared-album keys, which are wrapped with the master key.
 
@@ -120,12 +155,12 @@ The key reaches our server only in wrapped form:
 1. **Same Telegram account:** the key is found in CloudStorage automatically.
 2. **Recovery code:** type or paste the 52 characters.
 3. **Linking a device without Telegram** (the iPhone or Android app, or a browser):
-   - the new device creates a one-time ECDH P-256 key pair and gives the server its public half;
-   - the user approves the link in the Telegram Mini App, which already has the key. The Mini App wraps the master key
-     to that public half (ECIES, 3.6) and gives the server only the wrapped key;
-   - the new device collects it once (the request lives 10 minutes) and opens it with its private half;
-   - both screens show the same 4 digits. If the server swapped the public key, the digits will most likely differ.
-     The weakness of this check is described in section 10.
+   - the new device shows 6 random digits and gives the server the first SPAKE2 message (3.8);
+   - the user opens the Telegram Mini App, which already has the key, and types those 6 digits. The Mini App answers
+     and gives the server the master key locked with a key from the exchange;
+   - the new device collects the answer once (the request lives 10 minutes) and opens the key only if the same code
+     was typed. Otherwise it shows "The code didn't match" and unlinks itself;
+   - until 27 November 2026, 4 digits were compared instead of a code (a weakness, see section 10).
 
 ## 7. If the key is lost
 
@@ -197,7 +232,8 @@ Only on the user's own action, and only for their own file:
      see it. Telegram's own script (`telegram-web-app.js`) is loaded from Telegram's servers.
    - **What could close it.**
      - publish the SHA-256 of every released version here and in the changelog;
-     - load `crypto.js` with `integrity="sha256-…"` (SRI);
+     - load `crypto.js` with `integrity="sha256-…"` (SRI). The P-256 library is already loaded from `crypto.js`
+       exactly this way (3.8);
      - ship `crypto.js` and hash checks inside the iPhone and Android apps, so they do not take crypto code from the
        server;
      - an independent audit.
@@ -206,7 +242,10 @@ Only on the user's own action, and only for their own file:
    guest's CloudStorage.
 3. **Key-substitution checks are short or optional.** These guard against a dishonest server that swaps public keys
    without changing any code:
-   - **device link:** 4 digits. Finding a key pair with the same 4 digits takes about 10,000 tries, which is seconds;
+   - **device link:** since 27 November 2026, a 6-digit code and SPAKE2 (3.8): a server substituting messages guesses
+     with a 1 in 1,000,000 chance per code entry, and a failure is visible. Before that, 4 digits were compared, and a
+     key pair with the same digits could be found in seconds. Devices linked earlier were linked the old way; to be
+     safe, they can be unlinked and linked again;
    - **trusted person:** since 27 November 2026 the envelope is sealed only after comparing 16 digits (section 8).
      Envelopes sealed earlier were made without a comparison: a server holding B could have substituted its own key
      then. To be safe, the trusted person can be set up again;
@@ -217,8 +256,11 @@ Only on the user's own action, and only for their own file:
 7. **A former shared-album member** keeps the file keys of photos they have already seen.
 8. **Database backups** are kept for 31 days. They contain what is listed in section 9 and wrapped (not plaintext)
    copies of keys.
+9. **The link code protects against the server, not against being tricked.** If a scammer sends someone a link and
+   their own code and talks them into typing it in Telegram, the scammer's device gets linked. The Telegram window
+   warns about this and shows the device name, and the owner gets a bot message about every new link.
 
 ## 11. How to check
 
-See `README.en.md`: `verify.py` checks that the served file is this one; `tests/check_vectors.mjs` and
-`tests/check_vectors.py` check the formats.
+See `README.en.md`: `verify.py` checks that the served files are these (`crypto.js` and `lib/noble-p256.js`);
+`tests/check_vectors.mjs` and `tests/check_vectors.py` check the formats, including the official RFC 9382 vectors.

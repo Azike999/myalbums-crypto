@@ -196,6 +196,83 @@ window.PBCrypto = (function () {
     return new Uint8Array(await subtle.decrypt({ name: "AES-GCM", iv: b64dec(i) }, k, b64dec(c)));
   }
 
+  /* ---- Подключение устройства по коду (27.11.2026, владелец: вариант «Б»). Раньше Телеграм запирал основной ключ
+     на открытую половину нового устройства, а человек сверял 4 цифры от неё. Сервер, подменивший половину, подбирал
+     пару с теми же цифрами за секунды, а любую короткую сверку можно подобрать заранее.
+     Теперь — SPAKE2 по RFC 9382 (набор P256-SHA256-HKDF-HMAC, стандартные точки M и N). Новое устройство (сторона A)
+     показывает 6 случайных цифр. Они не уходят ни на сервер, ни в Телеграм: человек сам набирает их в Телеграме
+     (сторона B). Обе стороны вмешивают код в обмен ключами, и общий ключ Ke совпадает, только если код один и тот же.
+     Сервер, подменивший сообщения, может лишь угадывать: одна попытка на один ввод кода, шанс 1 из миллиона, и неудача
+     видна человеку («код не подошёл»). Подобрать заранее нечего: из пересланных данных код не вычислить.
+     Отступление от RFC: подтверждение cA от A к B не посылается — B сразу отвечает cB и основным ключом, запертым
+     ключом из Ke. Иначе Телеграм пришлось бы держать открытым до ответа нового устройства (на одном телефоне —
+     4 переключения вместо 2). Попыток угадать это не добавляет: каждый ответ B — одна попытка, как и в RFC.
+     Сложения точек кривой в WebCrypto нет, поэтому P-256 — из библиотеки @noble/curves (MIT, проверена независимыми
+     аудиторами): lib/noble-p256.js. Грузится только при подключении и только с этим отпечатком (SRI) — подменить её,
+     не поменяв этот файл, нельзя. */
+  const LINK_LIB = "lib/noble-p256.js", LINK_LIB_SRI = "sha256-xOg/ylCFvr5t0my2HsOJdLbLtgvDVqxmWAI3Ss+Zvh8=";
+  const LINK_IDS = ["myalbums-link-v1:device", "myalbums-link-v1:telegram"];        // A и B в стенограмме RFC
+  const SPAKE_M = "02886e2f97ace46e55ba9dd7242579f2993b64e16ef3dcab95afd497333d8fa12f";   // RFC 9382, §6, P-256
+  const SPAKE_N = "03d8bbd6c639c62937b04d997f38c3770719c629d7014d49a24b4f98baa1292b49";
+  let p256load = null;
+  function p256() {
+    if (globalThis.nobleP256) return Promise.resolve(globalThis.nobleP256.Point);
+    if (!p256load) p256load = new Promise((res, rej) => {
+      const s0 = document.querySelector('script[src*="crypto.js"]'), sc = document.createElement("script");
+      sc.src = (s0 ? s0.src.replace(/crypto\.js.*$/, "") : "/static/") + LINK_LIB;
+      sc.integrity = LINK_LIB_SRI;                                  // браузер сверит отпечаток и не выполнит чужой файл
+      sc.onload = () => (globalThis.nobleP256 ? res(globalThis.nobleP256.Point) : rej(new Error("p256")));
+      sc.onerror = () => rej(new Error("p256"));
+      document.head.appendChild(sc);
+    }).catch((e) => { p256load = null; throw e; });
+    return p256load;
+  }
+  const utf8 = (str) => new TextEncoder().encode(str);
+  const hex2b = (h) => Uint8Array.from(h.match(/../g) || [], (x) => parseInt(x, 16));
+  const b2hex = (b) => Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
+  const b2n = (b) => BigInt("0x" + (b2hex(b) || "0"));
+  const n2b = (n) => hex2b(n.toString(16).padStart(64, "0"));           // w в стенограмме — 32 байта, старшие вперёд
+  function cat(...parts) {
+    const o = new Uint8Array(parts.reduce((t, p) => t + p.length, 0)); let i = 0;
+    for (const p of parts) { o.set(p, i); i += p.length; }
+    return o;
+  }
+  const lenp = (b) => { const l = new Uint8Array(8); new DataView(l.buffer).setUint32(0, b.length, true); return cat(l, b); };   // len(x) || x, длина — 8 байт little-endian
+  const digest = async (alg, b) => new Uint8Array(await subtle.digest(alg, b));
+  async function hkdf(ikm, info, len) {
+    const k = await subtle.importKey("raw", ikm, "HKDF", false, ["deriveBits"]);
+    return new Uint8Array(await subtle.deriveBits({ name: "HKDF", hash: "SHA-256", salt: new Uint8Array(0), info }, k, len * 8));
+  }
+  async function hmac(key, msg) {
+    const k = await subtle.importKey("raw", key, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+    return new Uint8Array(await subtle.sign("HMAC", k, msg));
+  }
+  // 6 цифр → w: SHA-512 (на 64+ бита длиннее порядка кривой — без перекоса, как советует RFC) по модулю порядка n
+  async function spakeW(code, n) {
+    const d = String(code || "").replace(/\D/g, "");
+    if (d.length !== 6) throw new Error("link_code");
+    return b2n(await digest("SHA-512", utf8("myalbums-link-v1:w:" + d))) % n;
+  }
+  function spakeScalar(n) {             // равномерно из [1, n): выпавшее за край отбрасываем (RFC: rejection sampling)
+    for (;;) { const v = b2n(crypto.getRandomValues(new Uint8Array(32))); if (v > 0n && v < n) return v; }
+  }
+  // одна сторона SPAKE2: своё сообщение, а если пришло сообщение собеседника — ключи по RFC 9382, §3.3 и §4
+  async function spake(P, role, ids, w, s, peer) {
+    const M = P.fromHex(SPAKE_M), N = P.fromHex(SPAKE_N), [mine, theirs] = role === "A" ? [M, N] : [N, M];
+    const msg = P.BASE.multiply(s).add(mine.multiply(w)).toBytes(false);
+    if (!peer) return { msg };
+    const pt = P.fromBytes(peer); pt.assertValidity();                 // RFC §7: точка собеседника — только с кривой
+    const K = pt.subtract(theirs.multiply(w)).multiply(s).toBytes(false);   // кофактор P-256 = 1
+    const [pA, pB] = role === "A" ? [msg, peer] : [peer, msg];
+    const TT = cat(lenp(utf8(ids[0])), lenp(utf8(ids[1])), lenp(pA), lenp(pB), lenp(K), lenp(n2b(w)));
+    const h = await digest("SHA-256", TT), Ke = h.slice(0, 16), Ka = h.slice(16);
+    const kc = await hkdf(Ka, utf8("ConfirmationKeys"), 32), KcA = kc.slice(0, 16), KcB = kc.slice(16);
+    return { msg, pA, pB, K, TT, Ke, Ka, KcA, KcB, cA: await hmac(KcA, TT), cB: await hmac(KcB, TT) };
+  }
+  // ключ, которым B запирает основной ключ: HKDF от Ke со своей меткой (сам Ke никуда не идёт)
+  const linkBox = async (Ke) => ({ aes: await subtle.importKey("raw", await hkdf(Ke, utf8("myalbums-link-v1:master"), 32), "AES-GCM", false, ["encrypt", "decrypt"]) });
+  const sameBytes = (a, b) => a.length === b.length && a.reduce((d, x, i) => d | (x ^ b[i]), 0) === 0;
+
   return {
     hasKey: () => !!master,
     /* ---- доверенный человек: конверт «два из двух». E — ключ конверта, A и B — половины (B = E xor A):
@@ -310,23 +387,43 @@ window.PBCrypto = (function () {
       const n = (((h[0] << 24) | (h[1] << 16) | (h[2] << 8) | h[3]) >>> 0) * 3 + (h[4] % 3);
       return String(n % 1e10).padStart(10, "0").replace(/(\d{5})(\d{5})/, "$1 $2");
     },
-    /* ---- вход с устройства без Телеграма (12.11.2026, app/devices.py). Новое устройство создаёт разовую пару и
-       отдаёт открытую половину; устройство с ключом (мини-приложение в Телеграме) запирает для неё основной ключ той
-       же обёрткой ECIES, что у общих альбомов; сервер носит только запертое. linkCheck — 4 цифры от открытой
-       половины: одинаковы на обоих экранах, если сервер половину не подменил. */
-    linkPair: async () => {
-      const kp = await subtle.generateKey(ECDH, true, ["deriveBits"]);
-      return { pub: b64enc(await subtle.exportKey("spki", kp.publicKey)), priv: b64enc(await subtle.exportKey("pkcs8", kp.privateKey)) };
+    /* ---- вход с устройства без Телеграма (12.11.2026, app/devices.py), с 27.11.2026 — по коду (SPAKE2, см. выше).
+       A — новое устройство: linkCode → linkStart (сообщение серверу) → … → linkFinish (основной ключ).
+       B — Телеграм с ключом: человек набирает 6 цифр → linkAnswer (ответ + основной ключ, запертый общим ключом).
+       Сервер носит только сообщения SPAKE2 и запертое; ни кода, ни ключа у него нет. */
+    linkCode: () => {
+      for (;;) { const v = crypto.getRandomValues(new Uint32Array(1))[0]; if (v < 4294000000) return String(v % 1000000).padStart(6, "0"); }
     },
-    linkWrap: (pubB64) => eciesWrap(master.raw, pubB64),
-    linkOpen: async (wrapped, privB64) => {
-      const raw = await eciesUnwrap(wrapped, await subtle.importKey("pkcs8", b64dec(privB64), ECDH, false, ["deriveBits"]));
-      if (raw.length !== 32) throw new Error("ключ не той длины");
+    linkStart: async (code) => {
+      const P = await p256(), n = P.Fn.ORDER, w = await spakeW(code, n), x = spakeScalar(n);
+      const { msg } = await spake(P, "A", LINK_IDS, w, x);
+      return { msg: "S1." + b64enc(msg), state: { code: String(code), x: x.toString(16) } };   // state — до ответа B (переживает перезагрузку)
+    },
+    linkAnswer: async (code, msgA) => {
+      const [v, a] = String(msgA || "").split(".");
+      if (v !== "S1" || !a) throw new Error("link_old");                 // запрос старой страницы (4 цифры) — не отвечаем
+      const P = await p256(), n = P.Fn.ORDER, w = await spakeW(code, n);
+      const r = await spake(P, "B", LINK_IDS, w, spakeScalar(n), b64dec(a));
+      return "S1." + [r.msg, r.cB, await encWith(await linkBox(r.Ke), master.raw)].map(b64enc).join(".");
+    },
+    linkFinish: async (state, answer) => {
+      const [v, b, c, box] = String(answer || "").split(".");
+      if (v !== "S1" || !b || !c || !box) throw new Error("link_bad");
+      const P = await p256(), n = P.Fn.ORDER, w = await spakeW(state.code, n);
+      const r = await spake(P, "A", LINK_IDS, w, BigInt("0x" + state.x), b64dec(b));
+      if (!sameBytes(r.cB, b64dec(c))) throw new Error("link_code");     // набрали не тот код — или сообщения подменены
+      const raw = await decWith(await linkBox(r.Ke), b64dec(box));
+      if (raw.length !== 32) throw new Error("link_bad");
       return b64enc(raw);
     },
-    linkCheck: async (pubB64) => {
-      const h = new Uint8Array(await subtle.digest("SHA-256", b64dec(pubB64)));
-      return String(((h[0] << 16) | (h[1] << 8) | h[2]) % 10000).padStart(4, "0");
+    // только для проверки по RFC 9382, приложение B: w, x, y заданы → все промежуточные значения (hex)
+    spake2Vector: async (A, B, wHex, xHex, yHex) => {
+      const P = await p256(), w = BigInt("0x" + wHex), x = BigInt("0x" + xHex);
+      const pA = (await spake(P, "A", [A, B], w, x)).msg, b = await spake(P, "B", [A, B], w, BigInt("0x" + yHex), pA);
+      const a = await spake(P, "A", [A, B], w, x, b.msg), o = {};
+      for (const k of ["pA", "pB", "K", "TT", "Ke", "Ka", "KcA", "KcB", "cA", "cB"]) o[k] = b2hex(a[k]);
+      o.bothSides = b2hex(b.Ke) === o.Ke && b2hex(b.cA) === o.cA;
+      return o;
     },
     /* ---- сверка ключа доверенного (27.11.2026). Раньше телефон хозяина запирал половину A на открытую половину
        доверенного, взятую с сервера, без проверки: сервер, у которого и так половина B, мог подставить свою пару и собрать

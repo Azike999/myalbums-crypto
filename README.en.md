@@ -13,12 +13,13 @@ Only the encryption is published. The rest of the app and the server code are cl
 | File | What it is |
 |---|---|
 | `crypto.js` | All of the app's cryptography. An exact, byte-for-byte copy of the file your phone receives |
+| `lib/noble-p256.js` | P-256 arithmetic for linking a device by code, from the open-source library @noble/curves (MIT). `crypto.js` loads it only with its SHA-256 (SRI). How it was built: `lib/BUILD.md` |
 | `SPEC.en.md` | Algorithms, where the key lives, what is encrypted, what the server sees in plaintext, limitations ([Русский](SPEC.md)) |
 | `test_vectors.json` | Test vectors: known key and data → expected ciphertext |
-| `tests/check_vectors.mjs` | Checks the vectors against the real `crypto.js` (Node.js 20+) |
+| `tests/check_vectors.mjs` | Checks the vectors against the real `crypto.js` (Node.js 20+), including the official RFC 9382 vectors (`tests/rfc9382_vectors.json`) |
 | `tests/check_vectors.py` | Independent check in Python, written from the spec without `crypto.js` |
 | `tests/make_vectors.mjs` | How the vectors were produced |
-| `verify.py` | Downloads `crypto.js` from the app and compares it with the file here |
+| `verify.py` | Downloads `crypto.js` and `lib/noble-p256.js` from the app and compares them with the files here |
 | `SECURITY.md` | How to report a vulnerability |
 
 ## Check it yourself

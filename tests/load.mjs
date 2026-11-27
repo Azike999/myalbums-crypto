@@ -29,6 +29,11 @@ export function loadPBCrypto(seed) {
   Object.defineProperty(globalThis, "crypto", { value: fake, configurable: true, writable: true });
   globalThis.window = globalThis;
   delete globalThis.PBCrypto;
+  // lib/noble-p256.js: the browser runs it only if its SHA-256 equals the one written in crypto.js (SRI) - same check here
+  const lib = fs.readFileSync(new URL("../lib/noble-p256.js", import.meta.url));
+  const sri = "sha256-" + createHash("sha256").update(lib).digest("base64");
+  if (!src.includes(`LINK_LIB_SRI = "${sri}"`)) throw new Error("lib/noble-p256.js does not match the SRI hash in crypto.js");
+  if (!globalThis.nobleP256) vm.runInThisContext(lib.toString("utf8"), { filename: "lib/noble-p256.js" });
   vm.runInThisContext(src, { filename: "crypto.js" });
   return globalThis.PBCrypto;
 }

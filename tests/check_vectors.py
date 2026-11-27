@@ -136,11 +136,92 @@ n = int.from_bytes(h[:4], "big") * 3 + h[4] % 3
 code = str(n % 10 ** 10).zfill(10)
 ok(f"{code[:5]} {code[5:]}" == m["safety_code"], "safety code")
 
-d = E["device_link"]
-dpriv = serialization.load_der_private_key(b64(d["device_priv_pkcs8_b64"]), None)
-ok(ecies_open(d["wrapped"], dpriv) == master, "device link: master key unwrapped by new device")
-h = hashlib.sha256(b64(d["device_pub_spki_b64"])).digest()
-ok(str(int.from_bytes(h[:3], "big") % 10000).zfill(4) == d["link_check"], "device link: 4-digit check")
+# --- device link by code: SPAKE2, RFC 9382 (P256-SHA256-HKDF-HMAC). Plain-integer P-256 written from the standard
+# (slow, not constant-time - fine for a check), so this does not depend on the JS library crypto.js loads.
+P_ = 0xffffffff00000001000000000000000000000000ffffffffffffffffffffffff
+B_ = 0x5ac635d8aa3a93e7b3ebbd55769886bc651d06b0cc53b0f63bce3c3e27d2604b
+N_ = 0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551
+G_ = (0x6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296,
+      0x4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5)
+
+
+def padd(p, q):
+    if p is None: return q
+    if q is None: return p
+    if p[0] == q[0] and (p[1] + q[1]) % P_ == 0: return None
+    if p == q: l = (3 * p[0] * p[0] - 3) * pow(2 * p[1], -1, P_) % P_
+    else: l = (q[1] - p[1]) * pow(q[0] - p[0], -1, P_) % P_
+    x = (l * l - p[0] - q[0]) % P_
+    return x, (l * (p[0] - x) - p[1]) % P_
+
+
+def pmul(k, p):
+    r = None
+    while k:
+        if k & 1: r = padd(r, p)
+        p, k = padd(p, p), k >> 1
+    return r
+
+
+def pneg(p): return (p[0], (-p[1]) % P_)
+
+
+def pdec(b):
+    x = int.from_bytes(b[1:33], "big")
+    if b[0] == 4:
+        y = int.from_bytes(b[33:], "big")
+    else:
+        y = pow((x ** 3 - 3 * x + B_) % P_, (P_ + 1) // 4, P_)
+        if y % 2 != b[0] % 2: y = P_ - y
+    assert (y * y - x ** 3 + 3 * x - B_) % P_ == 0, "not on the curve"
+    return x, y
+
+
+def penc(p): return b"\x04" + p[0].to_bytes(32, "big") + p[1].to_bytes(32, "big")
+
+
+M_ = pdec(bytes.fromhex("02886e2f97ace46e55ba9dd7242579f2993b64e16ef3dcab95afd497333d8fa12f"))   # RFC 9382, section 6
+N2 = pdec(bytes.fromhex("03d8bbd6c639c62937b04d997f38c3770719c629d7014d49a24b4f98baa1292b49"))
+lenp = lambda b: len(b).to_bytes(8, "little") + b
+
+
+def hkdf(ikm, info, n=32):
+    return HKDF(hashes.SHA256(), n, None, info).derive(ikm)
+
+
+def spake_keys(A, B, w, pA, pB, K):
+    TT = lenp(A) + lenp(B) + lenp(pA) + lenp(pB) + lenp(K) + lenp(w.to_bytes(32, "big"))
+    h = hashlib.sha256(TT).digest()
+    kc = hkdf(h[16:], b"ConfirmationKeys")
+    return {"TT": TT, "Ke": h[:16], "Ka": h[16:], "KcA": kc[:16], "KcB": kc[16:],
+            "cA": hmac.new(kc[:16], TT, hashlib.sha256).digest(), "cB": hmac.new(kc[16:], TT, hashlib.sha256).digest()}
+
+
+RFC = json.load(open(os.path.join(HERE, "rfc9382_vectors.json"), encoding="utf-8"))["vectors"]
+for r in RFC:
+    w, x, y = (int(r[k], 16) for k in "wxy")
+    pA = penc(padd(pmul(x, G_), pmul(w, M_))); pB = penc(padd(pmul(y, G_), pmul(w, N2)))
+    K = penc(pmul(x, padd(pdec(pB), pneg(pmul(w, N2)))))
+    KB = penc(pmul(y, padd(pdec(pA), pneg(pmul(w, M_)))))
+    k = spake_keys(r["A"].encode(), r["B"].encode(), w, pA, pB, K)
+    got = {"pA": pA, "pB": pB, "K": K, **k}
+    bad = [n for n in ("pA", "pB", "K", "TT", "Ke", "Ka", "KcA", "KcB", "cA", "cB") if got[n].hex() != r[n]]
+    ok(not bad and K == KB, f"RFC 9382 Appendix B, A='{r['A']}' B='{r['B']}' (independent P-256): {bad}")
+
+d = D["device_link"]
+IDS = (b"myalbums-link-v1:device", b"myalbums-link-v1:telegram")
+w = int.from_bytes(hashlib.sha512(b"myalbums-link-v1:w:" + d["code"].encode()).digest(), "big") % N_
+x = int(d["x_hex"], 16)
+pA = penc(padd(pmul(x, G_), pmul(w, M_)))
+ok(d["message_a"] == "S1." + base64.b64encode(pA).decode(), "device link: message A = x*G + w*M, w = SHA-512(label || code) mod n")
+v_, b_, c_, box = d["answer_b"].split(".")
+pB = b64(b_)
+k = spake_keys(*IDS, w, pA, pB, penc(pmul(x, padd(pdec(pB), pneg(pmul(w, N2))))))
+ok(k["cB"] == b64(c_), "device link: confirmation cB = HMAC(KcB, TT) matches")
+ok(dec(hkdf(k["Ke"], b"myalbums-link-v1:master"), b64(box)) == master, "device link: master key opened with HKDF(Ke)")
+w2 = int.from_bytes(hashlib.sha512(b"myalbums-link-v1:w:" + (b"000001" if d["code"] == "000000" else b"000000")).digest(), "big") % N_
+k2 = spake_keys(*IDS, w2, pA, pB, penc(pmul(x, padd(pdec(pB), pneg(pmul(w2, N2))))))
+ok(k2["cB"] != b64(c_), "device link: with another code the confirmation does not match")
 
 he = E["heir"]
 h = hashlib.sha256(b64(he["heir_pub_spki_b64"])).digest()

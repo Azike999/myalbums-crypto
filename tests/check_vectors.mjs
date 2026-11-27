@@ -53,10 +53,29 @@ ok(await C.dedupTag(new TextEncoder().encode(D.dedup_tag.data_utf8)) === D.dedup
   ok(await C.safetyCode(m.member_pub_spki_b64) === m.safety_code, "shared album: safety code");
   ok(await C.pubFromPrivEnc(m.member_priv_enc_b64) === m.member_pub_spki_b64 && m.pub_from_priv_enc === m.member_pub_spki_b64, "own public key derived from own private key");
 }
-{
-  const d = E.device_link;
-  ok(hex(fromB64(await C.linkOpen(d.wrapped, d.device_priv_pkcs8_b64))) === D.master_key_hex, "device link: new device opens master key");
-  ok(await C.linkCheck(d.device_pub_spki_b64) === d.link_check, "device link: 4-digit check");
+{ // device link by code: SPAKE2 (RFC 9382) - first the official test vectors of the RFC, then ours
+  const R = JSON.parse(fs.readFileSync(new URL("./rfc9382_vectors.json", import.meta.url), "utf8")).vectors;
+  for (const r of R) {
+    const o = await C.spake2Vector(r.A, r.B, r.w, r.x, r.y);
+    const bad = ["pA", "pB", "K", "TT", "Ke", "Ka", "KcA", "KcB", "cA", "cB"].filter((k) => o[k] !== r[k]);
+    ok(!bad.length && o.bothSides, `RFC 9382 Appendix B, A='${r.A}' B='${r.B}': every intermediate value`, bad.join(","));
+  }
+  const d = D.device_link, st = { code: d.code, x: d.x_hex };
+  ok(/^\d{6}$/.test(d.code) && /^\d{6}$/.test(C.linkCode()), "device link: the code is 6 digits");
+  ok(hex(fromB64(await C.linkFinish(st, d.answer_b))) === D.master_key_hex, "device link: right code -> new device gets the master key");
+  const other = d.code === "000000" ? "000001" : "000000";
+  let err = ""; try { await C.linkFinish({ code: other, x: d.x_hex }, d.answer_b); } catch (e) { err = e.message; }
+  ok(err === "link_code", "device link: wrong code on the device -> refused (confirmation cB differs)");
+  err = ""; try { await C.linkFinish(st, await C.linkAnswer(other, d.message_a)); } catch (e) { err = e.message; }
+  ok(err === "link_code", "device link: wrong code typed in Telegram -> refused");
+  const parts = d.answer_b.split("."), box = fromB64(parts[3]); box[20] ^= 1; parts[3] = b64(box);
+  err = ""; try { await C.linkFinish(st, parts.join(".")); } catch (e) { err = e.message || "gcm"; }
+  ok(err !== "", "device link: one flipped bit in the locked key -> refused (GCM)");
+  err = ""; try { await C.linkAnswer(d.code, "A".repeat(124)); } catch (e) { err = e.message; }
+  ok(err === "link_old", "device link: an old-style request (public key, 4-digit check) is not answered");
+  const pt = fromB64(d.message_a.slice(3)); pt[40] ^= 1;               // a point that is not on the curve
+  err = ""; try { await C.linkAnswer(d.code, "S1." + b64(pt)); } catch (e) { err = e.message || "bad point"; }
+  ok(err !== "", "device link: a point that is not on the curve is rejected (RFC 9382, section 7)");
 }
 {
   const h = E.heir;

@@ -5,6 +5,7 @@
 // "ecdh" vectors: ECDH key pairs are generated inside WebCrypto and cannot be seeded, so these are
 // checked in the decrypt direction (given the recipient's private key -> expected plaintext).
 import fs from "node:fs";
+import { webcrypto } from "node:crypto";
 import { loadPBCrypto, hex, b64, fromB64, sha256hex, chunkedPlain, CHUNKED_LEN } from "./load.mjs";
 
 export const SEED = "myalbums-crypto test vectors v1";
@@ -42,6 +43,11 @@ export async function deterministic(C) {
 
   const sh = await C.newSharedKey();
   v.shared_album = { shared_key_b64: sh.raw, wrapped_by_master_b64: await C.wrapSharedKey(sh.key), share_code: C.shareCode() };
+
+  // device link by code (SPAKE2, RFC 9382): the new device's 6 digits, its secret scalar x and both messages.
+  // x comes from the seeded stream too, so this part is reproducible byte for byte.
+  const code = C.linkCode(), a = await C.linkStart(code);
+  v.device_link = { code, x_hex: a.state.x, message_a: a.msg, answer_b: await C.linkAnswer(code, a.msg) };
   return v;
 }
 
@@ -53,10 +59,9 @@ export async function ecdh(C) {
                album_key_b64: sh.raw, wrapped: await C.wrapForMember(sh.key, user.pub),
                safety_code: await C.safetyCode(user.pub),
                pub_from_priv_enc: await C.pubFromPrivEnc(user.priv_enc) };   // public half derived from the private one
-  const dev = await C.linkPair();                                        // new device without Telegram
-  v.device_link = { device_pub_spki_b64: dev.pub, device_priv_pkcs8_b64: dev.priv, wrapped: await C.linkWrap(dev.pub),
-                    link_check: await C.linkCheck(dev.pub) };
-  const heir = await C.linkPair();                                       // trusted person ("two of two")
+  // trusted person ("two of two"): in the app this is the person's own key pair; here a fresh P-256 pair
+  const kp = await webcrypto.subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, ["deriveBits"]);
+  const heir = { pub: b64(await webcrypto.subtle.exportKey("spki", kp.publicKey)), priv: b64(await webcrypto.subtle.exportKey("pkcs8", kp.privateKey)) };
   const seal = await C.heirSeal(heir.pub);
   v.heir = { heir_pub_spki_b64: heir.pub, heir_priv_pkcs8_b64: heir.priv, heir_code: await C.heirCode(heir.pub), ...seal };
   return v;
@@ -66,6 +71,7 @@ if ((process.argv[1] || "").endsWith("make_vectors.mjs")) {
   const C = loadPBCrypto(SEED);
   const out = { about: "Test vectors produced by crypto.js (see tests/make_vectors.mjs). Binary values: hex or base64.",
                 seed: SEED, crypto_js_sha256: sha256hex(fs.readFileSync(new URL("../crypto.js", import.meta.url))),
+                noble_p256_sha256: sha256hex(fs.readFileSync(new URL("../lib/noble-p256.js", import.meta.url))),
                 deterministic: await deterministic(C), ecdh: await ecdh(C) };
   fs.writeFileSync(new URL("../test_vectors.json", import.meta.url), JSON.stringify(out, null, 2) + "\n");
   console.log("test_vectors.json written");
