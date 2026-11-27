@@ -1,0 +1,79 @@
+{
+  "about": "Test vectors produced by crypto.js (see tests/make_vectors.mjs). Binary values: hex or base64.",
+  "seed": "myalbums-crypto test vectors v1",
+  "crypto_js_sha256": "2e18cc5cf3d044ff99a56b4d47220a42c8ffa26bf5c00ab3001c924ff1e74364",
+  "deterministic": {
+    "master_key_hex": "f081677e7caedfd4fcca653ea935abd779013d882438d6942550806022da70ad",
+    "recovery_code": "6CAW-O7T4-V3P5-J7GK-MU7K-SNNL-254Q-CPMI-EQ4N-NFBF-KCAG-AIW2-OCWQ",
+    "recovery_code_typed": "6cаw 07t4 v3p5 j7gk mu7k snnl 254q cpm1 еq4n nf8f kcаg а1w2 0cwq",
+    "encrypt_bytes": {
+      "plaintext_utf8": "Привет, My Albums! 👋",
+      "ciphertext_b64": "+eTdEpKEMY+Nyx5eC7hOIVQD4jlJ6QQQiyr5Z2sUTWk1mwMsraF3D79GpE5MZT4UDqcggnLNr9Pr"
+    },
+    "encrypt_json": {
+      "object": {
+        "cap": "Подпись к фото",
+        "taken": "2026-11-27T10:00:00",
+        "geo": [
+          48.8584,
+          2.2945
+        ],
+        "people": [
+          "Alice"
+        ]
+      },
+      "ciphertext_b64": "mYnZafNahuooHr0eNtlhO5FcSowgbGU9WDEMiexRi08g1IzGEVOfNqIyDryai+9BhqEC8ID/6KfIM9DfygV6DItam3CXPvTURxcodtfrAakYuWSs9rxIYUBeCpTu1V0bP2G2f8nAvXRCqmlHT6bPQXHvBgeSUokVBG5adnf6m6tJfhrxoiA73w=="
+    },
+    "dedup_tag": {
+      "data_utf8": "Привет, My Albums! 👋",
+      "tag_b64": "LJ0J6UBc8k38CucrC0ZM4WYvKumoe+mR9nide1F55JM="
+    },
+    "chunked": {
+      "plaintext": "byte i = (i*31+7) mod 251, length 2621563",
+      "plaintext_len": 2621563,
+      "plaintext_sha256": "0cdd2722ed238f465f4fc20d1e829e855285185b7315fcde1cd911ef9a28d739",
+      "ciphertext_len": 2621643,
+      "header_hex": "5042433100100000000000000028007b1acea2a987fa0dc00000000000000000",
+      "ciphertext_sha256": "c9dd148f722d259aa6062ec79150f30e93ad1e4698d1f694289969419fda77ea"
+    },
+    "file_key": {
+      "key_b64": "rsqdpgLXhGslcnoMWJkMwE2yAYt9km/sotWepVy1FxY=",
+      "encrypt_bytes_b64": "TLvYSVtiWJtplC8tZA/TYaEsgNJQ5ydVLi1Nlv0g1FMLb/BxVpIkL9GV6iOFO8wf3atbmE1YmQAO"
+    },
+    "secret_album": {
+      "password": "Пароль-тест 1 ﬁ",
+      "pbkdf2_iterations": 300000,
+      "salt_b64": "L4LERhRns/QtwN+sWe1GFw==",
+      "wrapped_b64": "WA1XXJgf8mjn5/P4ooty9oLNshPGgMlsq0qIOfrQWFTrm7s7F1s6rQcOohPTCRGGq7Ze//qtPbul1MCG",
+      "album_key_b64": "JoAN8HtW7g7v0o7yj712Lq67YTnEuxJ50kZxJ9yQXiA=",
+      "album_tag_b64": "Exb6Qfm2FQaxqhzYsJ7asdEYxUIldT0T7BIDWAiDfrc="
+    },
+    "shared_album": {
+      "shared_key_b64": "eP4Igj/I61cK7AHfjQIUx3NzckInohzFgGHmklGuxsk=",
+      "wrapped_by_master_b64": "8GsssxXS80RZNNnsMOpuHpx6Avu2HeOwHktxqr+skjgccZSTNQyBphvLuwXXqTHwz7lv0rJTRZuSvwyO",
+      "share_code": "UQ3F-IPTF-LC7X-V4EC"
+    }
+  },
+  "ecdh": {
+    "member": {
+      "member_pub_spki_b64": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEmAm5s3afvTq8bO/3We3EX6EaU4NAY5yazQWjDa5zCPOJJ9DniixXFtoAUuLgBOAcgtYV2NMJgg5PRnr82BO9LA==",
+      "member_priv_enc_b64": "NFzoX/+NVUaIcUCGzWrcSXaeFzbVQsoJVRPfphIbIy2KKwAJH8+oc4U4nfTwI+ShX32SFtIpijalY0D/No7AIHUVNNM0VjmD+zBbz8mGJfZnckzgFqYUSfYzidxGtu524X/UFOp/JHJPndiJCrCDMRxGdK9trLLJ7eJ8LxsUQbpQLziljrmlGd4B9GrA1EIMqeG/lRfqEmfNN/RLcDhTlwawAwA0aA==",
+      "album_key_b64": "y0fSg+9z/axMcnorS7c6OZUwuW2gdpWtW9+N887F+EI=",
+      "wrapped": "E1.BPd+U7aqAZRYTGzMItr6vFudnlF6kSVOcFR237blUorhE5miwUdPkTIl4dW5alur3B88A9D8zUbVUJVFHg1jZHE=.JVbdVU7jHxZBxGG8huVnhw==.B6NYV//PAH+auljz.x2tbw6T169Jk6VYL0xVo2o2/j9TNbfBt3Yk1BpcwJCSwRG2zHBzHU82gBh4rmAqF",
+      "safety_code": "54470 85988"
+    },
+    "device_link": {
+      "device_pub_spki_b64": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEXhyl4pHoM+2oEFuBKzS2GB2yvUnvSoFYwC9+DhPmyfON8jGxEDPZlD6WBNGD3dq+T9CxbXAXZuOI+Wbz4einng==",
+      "device_priv_pkcs8_b64": "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQg2hzqQOBCO76f+52QFhIiE/XDAvHSNzhn/vW/fO+nCgWhRANCAAReHKXikegz7agQW4ErNLYYHbK9Se9KgVjAL34OE+bJ843yMbEQM9mUPpYE0YPd2r5P0LFtcBdm44j5ZvPh6Kee",
+      "wrapped": "E1.BOIbF7asjwzV3dzIqET6zaas+DbpHId86eoWY9Ngc0J2rmhrl2WBPaAMWNj6iLx0a8Mra1Afwfuj1CeFHjKk+5c=.rvTu4YjrPGqek19+gT27Iw==.GlqKkCo7KHr1LKQX.4hbd0PTC+Kr8v63NScECtFw2BJuUpizeiuYqb0o/CBTIHxCudMRfsiUXrz+4Bl2Z",
+      "link_check": "2952"
+    },
+    "heir": {
+      "heir_pub_spki_b64": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEZBvp1pJPdr1EJON0uAM0XyE/qDCmN86vs4JLeuVQijd+mlWWzTjvwsdJweQ5z9VwjDGsWvGP9tq3yczXG5avdQ==",
+      "heir_priv_pkcs8_b64": "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgaK273xpJYAK/C/dW850DBvUxHw92UJH/FbRE1aWBO6+hRANCAARkG+nWkk92vUQk43S4AzRfIT+oMKY3zq+zgkt65VCKN36aVZbNOO/Cx0nB5DnP1XCMMaxa8Y/22rfJzNcblq91",
+      "env": "uF5Y/kptha+wVCO6DvpKtn2kZniRKLBvHod61m9q6aIbbuBU7P3BnnPH836UCPiV+STzrC3zlNps7iiY",
+      "share_b": "8F994xF2hysiPTZydg5ZF5++mEg0oIwlkxU5pGsUoYo=",
+      "share_a_enc": "E1.BA6MOXzQm8uBQzxGqeWdCb3xy55MCHqcK8YPQTqoXMV4SvIGhTYeUCvbe5BUt6B4P8vB7Ccti2/8CimjIdVA3+4=.f9tfyVzqLuzYsnHgW5X4lw==.au6oRgvwsqXD6WoD.ZegrgwKjQDELwaHMsv0p5yQiQVA8rn+dvn7Tsv2O8GUiOKu2sroHWYkCZjDGdrM6"
+    }
+  }
+}

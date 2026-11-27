@@ -1,0 +1,4 @@
+* text=auto eol=lf
+# crypto.js is kept byte for byte as the app serves it (CRLF line endings included):
+# verify.py compares SHA-256, so git must never convert it. (Must stay below the line above: later lines win.)
+crypto.js -text
