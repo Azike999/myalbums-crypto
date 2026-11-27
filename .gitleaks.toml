@@ -1,0 +1,8 @@
+# Secret scanners: test_vectors.json holds TEST keys on purpose (derived from the public seed in
+# tests/make_vectors.mjs, never used by anyone). Everything else is scanned with the default rules.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "public test vectors"
+paths = ['''^test_vectors\.json$''']
