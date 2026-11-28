@@ -336,6 +336,34 @@ window.PBCrypto = (function () {
       const kek = await keyPair(await pbkdf2(password, salt));
       return { salt: b64enc(salt), wrapped: b64enc(await encWith(kek, albumKey.raw)) };
     },
+    /* ---- блокировка приложения (28.11.2026, владелец: «Делай» — код и Face ID / отпечаток на вход).
+       Код из 6 цифр → PBKDF2-SHA256 (те же 300 000 итераций, соль 16 байт; к коду приписано «myalbums-lock-v1:», чтобы
+       он никогда не совпал с паролем секретного альбома). Из результата: ver = SHA-256(«myalbums-lock-v1:ver» ‖ биты) —
+       проверка кода в обычном режиме, и ключ-обёртка kek — в усиленном: основной ключ на устройстве и в облаке Телеграма
+       лежит только запертым этим ключом (AES-GCM), неверный код честно отказывает. Отпечаток/Face ID: Телеграм хранит
+       на телефоне случайный токен 32 байта и отдаёт его только после проверки; из токена — вторая обёртка ключа (только
+       на этом устройстве). ЧЕСТНО: 6 цифр — 10⁶ вариантов; кто вынет из памяти телефона запертый ключ, переберёт их на
+       своём компьютере. Усиленный режим защищает от того, кто просто взял телефон, а не от разбора памяти. */
+    lockDerive: async (pin, saltB64) => {
+      const salt = saltB64 ? b64dec(saltB64) : crypto.getRandomValues(new Uint8Array(16));
+      const bits = await pbkdf2("myalbums-lock-v1:" + pin, salt);
+      const ver = b64enc(await digest("SHA-256", cat(utf8("myalbums-lock-v1:ver"), bits)));
+      return { salt: b64enc(salt), ver, kek: await keyPair(bits) };
+    },
+    lockSeal: async (kek) => b64enc(await encWith(kek, master.raw)),
+    lockUnseal: async (kek, b64) => { master = await keyPair(await decWith(kek, b64dec(b64))); },
+    lockToken: () => b64enc(crypto.getRandomValues(new Uint8Array(32))),
+    tokenKek: async (tokenB64) => keyPair(b64dec(tokenB64)),
+    /* Отпечаток основного ключа — для «Забыли код?» в усиленном режиме, когда ключа в памяти нет: код восстановления
+       сверяется с ним, иначе чужой код снял бы блокировку и записал чужой ключ (стенд sim_lock, 28.11.2026). SHA-256 от
+       случайных 32 байт с меткой: ключ по нему не восстановить. code не задан — отпечаток открытого ключа. */
+    lockMk: async (code) => {
+      const raw = code ? b32dec(code) : master.raw;
+      if (!raw || raw.length < 32) throw new Error("код неполный");
+      return b64enc(await digest("SHA-256", cat(utf8("myalbums-lock-v1:mk"), raw.slice(0, 32))));
+    },
+    // «Забыли код?» в обычном режиме: введённый код восстановления — тот же, что у открытого ключа (тогда блокировку снимаем)
+    sameMaster: async (code) => { const raw = b32dec(code); return !!(raw && master && raw.length >= 32 && sameBytes(raw.slice(0, 32), master.raw)); },
     /* ---- ключ файла (26.09.2026, docs/security/FILE_KEYS.md). Раньше файлы шифровались ключом альбома, и чтобы
        сделать альбом общим или перенести фото в секретный, телефон скачивал, перешифровывал и заново отправлял
        каждый файл (владелец: «на 900 фотографий ушло 2 часа»). Теперь у каждого файла свой случайный ключ, а сам

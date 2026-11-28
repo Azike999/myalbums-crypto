@@ -48,6 +48,12 @@ export async function deterministic(C) {
   // x comes from the seeded stream too, so this part is reproducible byte for byte.
   const code = C.linkCode(), a = await C.linkStart(code);
   v.device_link = { code, x_hex: a.state.x, message_a: a.msg, answer_b: await C.linkAnswer(code, a.msg) };
+
+  // app lock: 6-digit passcode -> PBKDF2 -> check value "ver" and key-encryption key; "enhanced" mode stores the master
+  // key sealed with it ("L1.<salt>.<sealed>"); Face ID / fingerprint: a random token from Telegram seals it once more.
+  const pin = "258047", lk = await C.lockDerive(pin), tok = C.lockToken();
+  v.app_lock = { pin, pbkdf2_iterations: 300000, salt_b64: lk.salt, ver_b64: lk.ver, sealed_b64: await C.lockSeal(lk.kek),
+                 master_tag_b64: await C.lockMk(), bio_token_b64: tok, bio_sealed_b64: await C.lockSeal(await C.tokenKek(tok)) };
   return v;
 }
 

@@ -1,7 +1,7 @@
 {
   "about": "Test vectors produced by crypto.js (see tests/make_vectors.mjs). Binary values: hex or base64.",
   "seed": "myalbums-crypto test vectors v1",
-  "crypto_js_sha256": "c3018305f2371cf0ab6a6e59e7226dcd8e5e9608731a89cbdf4c6651d67713a1",
+  "crypto_js_sha256": "ffe5bcb6d35e23506b6550f57642d1e4a88e067f5d646722902694d243b37315",
   "noble_p256_sha256": "c4e83fca5085bebe6dd26cb61ec38974b6cbb60bc356ac665802374acf99be1f",
   "deterministic": {
     "master_key_hex": "aeca9da602d7846b25727a0c58990cc04db2018b7d926feca2d59ea55cb51716",
@@ -59,24 +59,34 @@
       "x_hex": "9aba58f3aef4eee188eb3c6a9e935f7e813dbb231a5a8a902a3b287af52ca417",
       "message_a": "S1.BDntPttfx4le12QEtmmhh8OXWTGCkUFvqL6vouD8ynnyIlq/J/5x0BaiMfaEEpBy3DCXj8u71LK0kKyt7fE5PXQ=",
       "answer_b": "S1.BDUxZ116OBYbV4CxoVNxR9XlcVZ+iwWYxcsIOHn09Z81Qg35FPjXJwFhsHVl9+HamC78B6+RTB6fl3xJRg0tqUg=.rZHEMSN+O7hPP1oNNVepzefOUiS9hF+OuUv4JP27SXg=.jznsiAAOO5n+if/x7CdLjaDc0Mwom6p9yo9QsKNygnU9OcYS/2DsOv+D3S5BTyAF+2U+rvFDuftZPFB+"
+    },
+    "app_lock": {
+      "pin": "258047",
+      "pbkdf2_iterations": 300000,
+      "salt_b64": "tVwTbIgeiIy/QbtefRmaJA==",
+      "ver_b64": "rDLreOGI11H/AM79iJvWcqoUR7cROHAa324EZZkF17I=",
+      "sealed_b64": "eO9ozn9cid98S4wBNculSXFisS8VGTunez8nU8kGEqiSmLFS4MWrBQvaugZjXTPFBKCLqnGYd+wIl0w9",
+      "master_tag_b64": "zt0KEae/hibJvtmPKmvbKXfRZxNRP/Ri/wD73eXf9H4=",
+      "bio_token_b64": "OhsAabS/xH+aWIlfbqpC2eHv8p6yod/zXF07O78ti7s=",
+      "bio_sealed_b64": "7+us6E5r2wzjjARPRcteI2QJm9rIrrkJpkShmJfqhwiCKxarwilV0thzOfN4DZ0m1ajPtMzass+Fenzg"
     }
   },
   "ecdh": {
     "member": {
-      "member_pub_spki_b64": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEROvfIF/tnYK+48WahtmI1DF2Ezs2BlGfcF8K7RoT/Lo+RBmPHpTxw/9eJRey7S4GAG9YQx55D+Z9IwjEqqLWmg==",
-      "member_priv_enc_b64": "tVwTbIgeiIy/QbteMIfgM1BLn8NQQPCJKPl+kTbETXuQ6GTtTV7e8hql4h6Q0xFM0LO7D3zsEO9Vq9E5NRXYVz4K1UIv/3ZVXaaBvlaQK7DLH/Pa4YOuYNTbK1j5pMWyCvnvzBEsSK8sNr7q8gxOj/UqPji/W1g+EwxqcGBa5nncM9eTV/7Y2QDfCrf6gGeq7Z1HNFrqkUrDhMeTVF2AmXMA4seScA==",
-      "album_key_b64": "fRmaJDobAGm0v8R/mliJX26qQtnh7/KesqHf81xdOzs=",
-      "wrapped": "E1.BBEeWue8Eqzd9sJjColVl5rS8Gyp8chmUgCpdTrhR71PKagP3ekqT2hM/5A7ryYOuDizcEL2WW3r31SjM8DUAao=.vy2Lu3jvaM5/XInffEuMAQ==.7+us6E5r2wzjjARP.bneBJRDVMmGUHao4NJVPvnAdbKLseR7jhHM2V0Ffd7MalGAcaPosUT465Ff52qs4",
-      "safety_code": "86707 42237",
-      "pub_from_priv_enc": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEROvfIF/tnYK+48WahtmI1DF2Ezs2BlGfcF8K7RoT/Lo+RBmPHpTxw/9eJRey7S4GAG9YQx55D+Z9IwjEqqLWmg=="
+      "member_pub_spki_b64": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAED69/zeVjOUOOt32UjBVK4RpwwWcSGf5OAO+9BlXfvSkaWpR7KQLWBzKDPGEqyn6+yNvSDwoQVsIES6BXIwxlOw==",
+      "member_priv_enc_b64": "kjJpel7H1YDMOSLe+R+oTsE9EuDb8ocZ8ko+o1kXOk50mgfebpZz2FPKOHKSw0ItoK9b7W1tBn9gpJjIiOU4Rsb15LIPSP+dsp11J6zX4kH4mwN4FZ5dId6PyHWZG2FPvdHttm4YKg+o1aJaG058eBcs3VQoatr7hCP1jaC4ryZNplD2mVg2iz+mEsmP6ufcMXoqHWoJhpEEQlx2SlN/P2lN7A3ksw==",
+      "album_key_b64": "rH/FgGrq03y6RQ4RM+RrSz+UcwOB/UT88Cwr5ZAW7o4=",
+      "wrapped": "E1.BJZrVnHWKbpA0QZUeHfTQz4okFC6m+UNQCzlvYt32TSzxIvQ2t6JY5z1bgqj6gD+knYZlLz5T0vVBHpkjbtUH6s=.f/5AzeEZXpW2waGfL9hK3g==.7V9HL8y4C4gfSngz.y9M2lbK33q1iLvw96sJ/k81uHbPf5lcAB4YHnF6RlqW4ZDO2jF8oCzMEv/wimIbP",
+      "safety_code": "05512 95321",
+      "pub_from_priv_enc": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAED69/zeVjOUOOt32UjBVK4RpwwWcSGf5OAO+9BlXfvSkaWpR7KQLWBzKDPGEqyn6+yNvSDwoQVsIES6BXIwxlOw=="
     },
     "heir": {
-      "heir_pub_spki_b64": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAErf1EAFYC+sHwlMJfGr2V/vie09fmIHtFs4aAcw21wRiiCUQt3Xcyh4Gh2u9nfJa3hV+oW5mZEX2OtiRHXDtMTw==",
-      "heir_priv_pkcs8_b64": "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgHrqpghb2B9KUp3pLix8u9D8Wg7dFw/v8b/+iJAoG8+2hRANCAASt/UQAVgL6wfCUwl8avZX++J7T1+Yge0WzhoBzDbXBGKIJRC3ddzKHgaHa72d8lreFX6hbmZkRfY62JEdcO0xP",
-      "heir_code": "8484 3690 7866 5375",
-      "env": "zLgLiB9KeDOqk/1zGSxGbdJXT0vg/FbIIIL3xg/RZ12Ocu83LMDqu2AgfhvcBwZGnuM+gAcAU+cixPPO",
-      "share_b": "E88thq7r/mVcL8xQ04GFTYvzjekMhK+OHDwhldLLNCw=",
-      "share_a_enc": "E1.BB4DgRPpvMwpe4df2qIYYpJ/btM6IvwKzG+ONQfakSI1HWvmdaAUpL/yOeQbuWtxcTGK3hFIABYwkbyNGmxEUkE=.mbKBTusVlAwAal3ychDkeQ==.moTRfPBr7FPogKSQ.CLenonVIulK/iVoDqEKkfQhwmnMaXqHaUVr77J5ZiTELwIMsNDHFfxgIusEKGBC/"
+      "heir_pub_spki_b64": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEsdaOjJ6i3xjhtGiYmJR5wl15b5SRKb1fsW5M1BqbrX0hUJl2WGiGl3TCuxL1Ph7aB8t9v3kAUBkCGCmMWSkIGw==",
+      "heir_priv_pkcs8_b64": "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgJMij/RMUF6iV5RMfQJuMbfUacoVkwIpnLe67nhQRo+uhRANCAASx1o6MnqLfGOG0aJiYlHnCXXlvlJEpvV+xbkzUGputfSFQmXZYaIaXdMK7EvU+HtoHy32/eQBQGQIYKYxZKQgb",
+      "heir_code": "0832 4324 8428 0116",
+      "env": "Z+dqjgqhnmcyugbgM/gfWX+SKAfxlg7qm5POVyqnbaxEpuUbWKRkvfLNYeHQ706KpopnybPoShHRLPtZ",
+      "share_b": "I0GxgpzPqdyUa4ehBXdzo5wTGM6BDfeEWD/gXoeuT+Y=",
+      "share_a_enc": "E1.BAxV3SwMwiokn5HziDdqYDeRzqGg9Fm2dOQIu3AlPME1h8n1WyJGyPBZWIYy14oSCa2WqrbBDD3xZX24uFDZ3tY=.VfzsfkS8eASjVI8M4HDrxA==.T+4JU8CjhTtWYrjm.5a7NabDZOg6GrEiQxW8r/gJ+pl4sw4qCOn6YsD8H8lE/yLvYRxCUOoAjoa7l0s7F"
     }
   }
 }

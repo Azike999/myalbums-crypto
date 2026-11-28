@@ -124,6 +124,18 @@ ok(album == b64(s["album_key_b64"]), "secret album: PBKDF2-SHA256 -> unwrap albu
 at = hmac.new(dedup_key(album), b64(D["dedup_tag"]["tag_b64"]), hashlib.sha256).digest()
 ok(base64.b64encode(at).decode() == s["album_tag_b64"], "secret album: album tag")
 
+lk = D["app_lock"]
+bits = PBKDF2HMAC(hashes.SHA256(), 32, b64(lk["salt_b64"]), lk["pbkdf2_iterations"]).derive(("myalbums-lock-v1:" + lk["pin"]).encode())
+ok(base64.b64encode(hashlib.sha256(b"myalbums-lock-v1:ver" + bits).digest()).decode() == lk["ver_b64"], "app lock: ver = SHA-256(label || PBKDF2(passcode))")
+ok(dec(bits, b64(lk["sealed_b64"])) == master, "app lock (enhanced): master key opened with PBKDF2(passcode)")
+bad = PBKDF2HMAC(hashes.SHA256(), 32, b64(lk["salt_b64"]), lk["pbkdf2_iterations"]).derive(b"myalbums-lock-v1:258048")
+try:
+    dec(bad, b64(lk["sealed_b64"])); ok(False, "app lock: a wrong passcode is refused")
+except Exception:
+    ok(True, "app lock: a wrong passcode is refused")
+ok(base64.b64encode(hashlib.sha256(b"myalbums-lock-v1:mk" + master).digest()).decode() == lk["master_tag_b64"], "app lock: master tag = SHA-256(label || master)")
+ok(dec(b64(lk["bio_token_b64"]), b64(lk["bio_sealed_b64"])) == master, "app lock: Face ID token opens its own copy of the master key")
+
 sh = D["shared_album"]
 ok(dec(master, b64(sh["wrapped_by_master_b64"])) == b64(sh["shared_key_b64"]), "shared key stored under master key")
 ok(len(b32dec(sh["share_code"])) == 10, "share code = 80 bits")

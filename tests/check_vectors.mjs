@@ -23,6 +23,15 @@ ok(C.recoveryCode() === D.recovery_code, "master key -> recovery code");
 ok(new TextDecoder().decode(await C.decryptBytes(fromB64(D.encrypt_bytes.ciphertext_b64))) === D.encrypt_bytes.plaintext_utf8, "decryptBytes");
 ok(eq(await C.decryptJSON(D.encrypt_json.ciphertext_b64), D.encrypt_json.object), "decryptJSON");
 ok(await C.dedupTag(new TextEncoder().encode(D.dedup_tag.data_utf8)) === D.dedup_tag.tag_b64, "dedupTag (HMAC, deterministic)");
+{ // app lock: the passcode gives the same check value and opens the sealed master key; a wrong one does not
+  const L = D.app_lock, d = await C.lockDerive(L.pin, L.salt_b64), C2 = loadPBCrypto(null);
+  ok(d.ver === L.ver_b64, "app lock: lockDerive(passcode, salt) -> ver");
+  await C2.lockUnseal(d.kek, L.sealed_b64);
+  ok(hex(fromB64(C2.exportB64())) === D.master_key_hex, "app lock: lockUnseal with the passcode -> master key");
+  let refused = false; try { await C2.lockUnseal((await C.lockDerive("258048", L.salt_b64)).kek, L.sealed_b64); } catch (_) { refused = true; }
+  ok(refused, "app lock: a wrong passcode is refused");
+  ok(await C.lockMk() === L.master_tag_b64 && await C.lockMk(D.recovery_code_typed) === L.master_tag_b64, "app lock: master tag from the key = from the recovery code");
+}
 { // streamed HMAC = one-shot HMAC
   const h = C.dedupStream(); const t = new TextEncoder().encode(D.dedup_tag.data_utf8); h.update(t.subarray(0, 5)); h.update(t.subarray(5));
   ok(h.digestB64() === D.dedup_tag.tag_b64, "dedupStream (pure-JS SHA-256 in parts) = dedupTag");

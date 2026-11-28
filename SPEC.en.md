@@ -1,6 +1,6 @@
 # My Albums — how the encryption works
 
-[Русский](SPEC.md) · as of 27 November 2026 · `crypto.js` SHA-256 `c3018305…67713a1`
+[Русский](SPEC.md) · as of 28 November 2026 · `crypto.js` SHA-256 `ffe5bcb6…3b37315`
 
 Everything below is taken from the code, not from memory. The formats are checked against `test_vectors.json` by two
 independent programs (`tests/`). If the code and this text ever disagree, the code is right. Please tell us
@@ -118,6 +118,26 @@ with the SHA-256 written in `crypto.js` itself (`LINK_LIB_SRI`, Subresource Inte
 modified library. Both programs in `tests/` check the official RFC 9382 test vectors (Appendix B); the Python check
 does P-256 with its own arithmetic, without this library.
 
+### 3.9 App lock (since 28 November 2026, optional)
+
+A 6-digit passcode and, where Telegram supports it (BiometricManager, Bot API 7.2), Face ID or fingerprint. Off by default.
+- `bits = PBKDF2-SHA256("myalbums-lock-v1:" ‖ passcode, 16-byte salt, 300,000 iterations)`, 256 bits.
+- `ver = SHA-256("myalbums-lock-v1:ver" ‖ bits)` — passcode check in standard mode (the passcode covers the screen).
+- **Enhanced mode:** the master key is sealed with `bits` (AES-256-GCM, as in 3.1) and is kept in CloudStorage and
+  `localStorage` only as `L1.<salt>.<sealed key>`. There is no plain key on the device until the passcode is entered.
+- **Face ID / fingerprint:** Telegram keeps a random 32-byte token on the device (`updateBiometricToken`) and returns
+  it only after the check. In enhanced mode the token seals a second copy of the key, on this device only (`B1.…`).
+  Standard mode does not need the token.
+- `mk = SHA-256("myalbums-lock-v1:mk" ‖ master key)` lets "Forgot passcode?" check the recovery code without opening
+  the key. The recovery code removes the lock; in enhanced mode nothing else can, so the lock can be turned on only
+  after the recovery code has been saved.
+- Settings (mode, salt, `ver`, `mk`, timeout) are in CloudStorage and `localStorage`. None of this reaches our server.
+- After 5 wrong passcodes in a row: a 30 s pause, then twice as long each time, up to 15 min. This limit is enforced
+  by the app, not by cryptography (section 10).
+- Coming back after the chosen time (immediately / 1 / 5 / 15 min) shows the passcode screen; while the app is in the
+  background, a blank cover hides the photos. The key is not wiped from memory then, so an upload in progress is not
+  cut off; after a fresh start in enhanced mode it is absent until the passcode is entered.
+
 ## 4. What is encrypted
 
 Encrypted on the phone before upload:
@@ -144,6 +164,7 @@ posters are all computed on the phone. No map services or third-party geocoders 
 The key is kept as plain base64 in CloudStorage and `localStorage`, because the page code reads it from there.
 **Telegram can technically read the key from CloudStorage.** This is a deliberate trade-off: without it, the key would
 be lost with the phone. See section 10.
+With the enhanced app lock (3.9) only a key sealed with a 6-digit passcode is kept there.
 
 The key reaches our server only in wrapped form:
 - during a device link (sections 6 and 3.8; locked with a key from the SPAKE2 exchange);
@@ -239,7 +260,8 @@ Only on the user's own action, and only for their own file:
      - an independent audit.
 2. **Telegram can read the master key** from CloudStorage, as can anyone who takes over the Telegram account. By
    default a guest link and its code are sent together in one Telegram message. A guest's album key is saved in the
-   guest's CloudStorage.
+   guest's CloudStorage. The enhanced app lock (3.9) is weak protection against Telegram: the sealed key sits in the
+   same CloudStorage, and 10⁶ passcodes can be tried.
 3. **Key-substitution checks are short or optional.** These guard against a dishonest server that swaps public keys
    without changing any code:
    - **device link:** since 27 November 2026, a 6-digit code and SPAKE2 (3.8): a server substituting messages guesses
@@ -252,13 +274,18 @@ Only on the user's own action, and only for their own file:
    - **shared album:** the 10-digit safety code is shown, but comparing it is optional.
 4. **Metadata is visible** (section 9): sizes, timing, the shared-album social graph, reminder dates.
 5. **The recovery code is the key itself** (256 bits, no password). Whoever sees it has everything.
-6. **An unlocked phone** with Telegram open opens the library. Secret albums require their password.
+6. **An unlocked phone** with Telegram open opens the library unless the app lock is on (3.9). Secret albums require
+   their password.
 7. **A former shared-album member** keeps the file keys of photos they have already seen.
 8. **Database backups** are kept for 31 days. They contain what is listed in section 9 and wrapped (not plaintext)
    copies of keys.
 9. **The link code protects against the server, not against being tricked.** If a scammer sends someone a link and
    their own code and talks them into typing it in Telegram, the scammer's device gets linked. The Telegram window
    warns about this and shows the device name, and the owner gets a bot message about every new link.
+10. **The app-lock passcode has 6 digits.** The number of attempts is limited by the app itself. Whoever copies the
+    sealed key out of the phone's storage or out of CloudStorage can try all 10⁶ passcodes on their own computer:
+    PBKDF2 slows this down but does not stop it. The lock protects against someone holding the phone, not against
+    forensic extraction of its storage.
 
 ## 11. How to check
 
